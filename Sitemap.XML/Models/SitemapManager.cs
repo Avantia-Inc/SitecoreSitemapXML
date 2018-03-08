@@ -222,6 +222,7 @@ namespace Sitemap.XML.Models
                     continue;
                 var contentLocation = ((DatasourceField)sharedDefinition.Fields[Constants.SharedContent.ContentLocationFieldName]).TargetItem;
                 var parentItem = ((DatasourceField)sharedDefinition.Fields[Constants.SharedContent.ParentItemFieldName]).TargetItem;
+                var urlFormat = ((DatasourceField)sharedDefinition.Fields[Constants.SharedContent.UrlFormatFieldName]).Value;
                 var sharedItems = new List<Item>();
                 if (BucketManager.IsBucket(contentLocation))
                 {
@@ -243,10 +244,10 @@ namespace Sitemap.XML.Models
                 var cleanedSharedItems = from itm in sharedItems
                                          where itm.Template != null && enabledTemplates.Select(t => t.ToLower()).Contains(itm.Template.ID.ToString().ToLower())
                                          select itm;
-                var sharedSitemapItems = cleanedSharedItems.Select(i => new SitemapItem(i, site, parentItem));
+                var sharedSitemapItems = cleanedSharedItems.Select(i => new SitemapItem(i, site, parentItem, urlFormat));
                 sharedModels.AddRange(sharedSitemapItems);
             }
-
+            
             var sitemapItems = descendants.ToList();
             sitemapItems.Insert(0, contentRoot);
 

@@ -24,6 +24,7 @@ namespace Sitemap.XML
         {
             public static string ParentItemFieldName = "Parent Item";
             public static string ContentLocationFieldName = "Content Location";
+            public static string UrlFormatFieldName = "URL Format";
         }
 
         public struct WebsiteDefinition

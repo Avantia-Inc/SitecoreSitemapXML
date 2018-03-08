@@ -2,6 +2,7 @@
 using Sitecore.Sites;
 using System;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Web;
 
 namespace Sitemap.XML.Models
@@ -10,7 +11,7 @@ namespace Sitemap.XML.Models
     {
         #region Constructor
 
-        public SitemapItem(Item item, SiteContext site, Item parentItem)
+        public SitemapItem(Item item, SiteContext site, Item parentItem, string urlFormat = null)
         {
             Priority = item[Constants.SeoSettings.Priority];
             ChangeFrequency = item[Constants.SeoSettings.ChangeFrequency].ToLower();
@@ -24,7 +25,7 @@ namespace Sitemap.XML.Models
             }
             else
             {
-                Location = GetSharedItemUrl(item, site, parentItem);
+                Location = GetSharedItemUrl(item, site, parentItem, urlFormat);
             }
         }
 
@@ -43,18 +44,22 @@ namespace Sitemap.XML.Models
 
         #region Private Methods
 
-        private static string GetSharedItemUrl(Item item, SiteContext site, Item parentItem)
+        private static string GetSharedItemUrl(Item item, SiteContext site, Item parentItem, string urlFormat)
         {
             var itemUrl = HtmlEncode(GetItemUrl(item, site));
             var parentUrl = HtmlEncode(GetItemUrl(parentItem, site));
             var siteConfig = new SitemapManagerConfiguration(site.Name);
             parentUrl = parentUrl.EndsWith("/") ? parentUrl : parentUrl + "/";
-            if (siteConfig.CleanupBucketPath)
+            if (!string.IsNullOrWhiteSpace(urlFormat))
+            {
+                return HtmlEncode(parentUrl + FormatItemUrl(item, urlFormat).TrimStart('/'));
+            }
+            else if(siteConfig.CleanupBucketPath)
             {
                 var pos = itemUrl.LastIndexOf("/", StringComparison.Ordinal) + 1;
                 var itemNamePath = itemUrl.Substring(pos, itemUrl.Length - pos);
                 return HtmlEncode(parentUrl + itemNamePath);
-            }
+            }             
             else
             {
                 var contentParentItem = SitemapManager.GetContentLocation(item);
@@ -64,6 +69,23 @@ namespace Sitemap.XML.Models
                 itemUrl = itemUrl.Replace(contentParentItemUrl, string.Empty);
                 return string.IsNullOrWhiteSpace(itemUrl) ? string.Empty : HtmlEncode(parentUrl + itemUrl.Trim('/'));
             }
+        }
+
+        private static string FormatItemUrl(Item item, string urlFormat)
+        {
+            if (urlFormat == null) throw new ArgumentNullException(nameof(urlFormat));
+            var formattedUrl = urlFormat;
+
+            // get tokens from format string (eg /{field one}/{field two})
+            var tokens = new Regex(@"({[\w ]+})").Matches(urlFormat);
+
+            // loop through each token and replace with the corresponding field in item
+            foreach (Match token in tokens)
+            {
+                formattedUrl = formattedUrl.Replace(token.Value, item.Fields[token.Value.Trim('{', '}')]?.Value ?? string.Empty);
+            }
+
+            return formattedUrl;
         }
 
         public static string GetSharedItemUrl(Item item, SiteContext site)
